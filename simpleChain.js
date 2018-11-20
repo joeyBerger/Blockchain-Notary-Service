@@ -3,6 +3,8 @@
 |  =========================================================*/
 const SHA256 = require('crypto-js/sha256');
 
+const hex2ascii = require('hex2ascii')
+
 // Importing the module 'level'
 const level = require('level');
 
@@ -92,7 +94,8 @@ class Blockchain {
                         resolve("Requested Block Does Not Exist");
                         //reject(err);
                     } else {
-                        resolve(JSON.parse((value)));
+                        //resolve(JSON.parse((value)));
+                        resolve(value);
                     }
                 })
             } else {
@@ -168,6 +171,66 @@ class Blockchain {
                     });
                 });
             })
+        })
+    }
+
+    addDecodedStoryToReturnObj(obj) {
+        return new Promise(function(resolve) {
+            let jsonResult = JSON.parse((obj))
+            jsonResult.body.star.storyDecoded = hex2ascii(jsonResult.body.star.story)
+            resolve (jsonResult);
+        })
+
+    }
+
+    // Get block by hash
+   getBlockByHash(hash) {
+        let self = this;
+        let block = null;
+        return new Promise(function(resolve, reject){
+            db.createReadStream()
+            .on('data', function (data) {
+                // let jsonResult = JSON.parse((data.value))
+                // console.log(jsonResult.hash);
+                //console.log(JSON.parse((data.value)).hash);
+                if(JSON.parse((data.value)).hash === hash){
+                    block = data.value;
+                    console.log("found block");
+                    resolve(block);
+                }
+            })
+            .on('error', function (err) {
+                reject(err)
+            })
+            .on('close', function () {
+                resolve(block);
+            });
+        });
+    }
+
+    getBlockByWalletAddress(address) {
+        let self = this;
+        let block = [];
+        return new Promise(function(resolve, reject){
+            db.createReadStream()
+            .on('data', function (data) {
+                //console.log(JSON.parse((data.value)).body);
+                if (JSON.parse((data.value)).body.address !== undefined && JSON.parse((data.value)).body.address === address)
+                {
+                    //block.push(JSON.parse((data.value)));
+                    block.push(((data.value)));
+                }
+                // if(JSON.parse((data.value)).hash === hash){
+                //     block = data.value;
+                //     resolve(block);
+                // }
+            })
+            .on('error', function (err) {
+                reject(err)
+            })
+            .on('close', function () {
+                resolve(block);
+            });
         })
     }
 }
