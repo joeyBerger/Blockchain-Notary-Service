@@ -1,30 +1,59 @@
-const TimeoutRequestsWindowTime = 5*60*1000 // 5*60*1000;  //1000
-const TimeoutMempoolValidWindowTime = 30*60*1000;
+const TimeoutRequestsWindowTime = 5 * 60 * 1000; // 5*60*1000;  //1000
+const TimeoutMempoolValidWindowTime = 30 * 60 * 1000;
 
 class Mempool {
-    constructor(){
-       this.mempool = [];
-       this.timeoutRequests = [];
-       this.mempoolValid = [];
-       this.timeoutMempoolValid = [];
+    constructor() {
+        this.mempool = [];
+        this.timeoutRequests = [];
+        this.mempoolValid = [];
+        this.timeoutMempoolValid = []; //implement this      
+    }
 
-       //this.mempoolTimeStamp = [];   //probably rename this to this.mempool
-   }
+    makeInitialValidation(request) {
+        if (this.timeoutRequests[request.address] !== undefined) {
+            //return validation request already stored in mempool
+            let message = this.mempool[request.address].message;
+            let requestTimeStamp = this.mempool[request.address].requestTimeStamp;
+            //calculate validation time remaining
+            let timeElapse = (new Date().getTime().toString().slice(0, -3)) - this.mempool[request.address].requestTimeStamp;
+            let timeRemaining = (TimeoutRequestsWindowTime / 1000) - timeElapse;
+            let returnObj = {
+                walletAddress: request.address,
+                requestTimeStamp: requestTimeStamp,
+                message: message,
+                validationWindow: timeRemaining,
+            }
+            return returnObj;
+        } else {
+            let self = this;
+            return new Promise(function(resolve, reject) {
+                //store timeout function in timeoutRequests to end initial validation request
+                self.timeoutRequests[request.address] = setTimeout(function() {
+                    self.removeValidationRequest(request.address)
+                }, TimeoutRequestsWindowTime);
+                resolve(self.returnValidationObjOnInitialRequest(request.address));
+            })
+        }
+    }
 
-   removeValidationRequest(iwalletAddress) {
+    removeValidationRequest(iwalletAddress) {
         this.timeoutRequests[iwalletAddress] = undefined;
-        console.log("in removeValidationRequest");
-   }
+    }
 
-   returnInitialValidationObj(iwalletAddress) {
+    returnValidationObjOnInitialRequest(iwalletAddress) {
+        //get current time
         let requestTimeStamp = new Date().getTime().toString().slice(0, -3);
-        requestTimeStamp = "1542589853";
+        requestTimeStamp = "1542589853"; //temp!!!
+        //generate message string
         let message = iwalletAddress.toString() + ":" + requestTimeStamp + ":" + "starRegistry";
-        let validationWindow = TimeoutRequestsWindowTime/1000;
+        //generate validation window to display in seconds
+        let validationWindow = TimeoutRequestsWindowTime / 1000;
+        //generate object to store critical data
         var mempoolObj = {
             requestTimeStamp: new Date().getTime().toString().slice(0, -3),
             message: message
         }
+        //store critical data in mempool array
         this.mempool[iwalletAddress] = mempoolObj;
         let returnObj = {
             walletAddress: iwalletAddress,
@@ -35,51 +64,31 @@ class Mempool {
         return returnObj;
     }
 
-    makeInitialValidation(request) {
-        if (this.timeoutRequests[request.address] !== undefined) {
-            let timeElapse = (new Date().getTime().toString().slice(0,-3)) - this.mempool[request.address].requestTimeStamp;
-            let timeLeft = (TimeoutRequestsWindowTime/1000) - timeElapse;
-            let returnObj = {
-                address: request.address,
-                timeRemaining: timeLeft,
-                instruction: "Please do the thing you need to do"
-            }
-            return returnObj;
-        }
-        else{
-            let self = this;            
-            return new Promise(function(resolve, reject) {
-                self.timeoutRequests[request.address]=setTimeout(function(){ self.removeValidationRequest(request.address) }, TimeoutRequestsWindowTime );  //you have no catch
-                resolve(self.returnInitialValidationObj(request.address));
-            })
-        }
-    }
-
-    validateRequestByWallet(request) {        
-        //if ((new Date().getTime().toString().slice(0,-3)) - req.requestTimeStamp > 0)     
-        console.log("request time stamp", this.mempool[request.address].message);   
-        if (parseInt(this.mempool[request.address].requestTimeStamp) > 0) {
-            //console.log("greater than 0");
-        }
-        const bitcoinMessage = require('bitcoinjs-message'); 
-        let isValid = bitcoinMessage.verify(this.mempool[request.address].message, request.address, request.signature);        
+    validateRequestByWallet(request) {
+        //if timeoutRequests' set timeout function is undefined, then validation must have timed out and return error object
         if (this.timeoutRequests[request.address] === undefined) {
             var errObj = {
-                error: "Request Has Timed Out"
+                Error: "Validation Request Has Timed Out"
             };
             return errObj;
         }
+        //check to see if message, signature and address are valid
+        const bitcoinMessage = require('bitcoinjs-message');
+        let isValid = bitcoinMessage.verify(this.mempool[request.address].message, request.address, request.signature);
         if (isValid === true) {
             this.timeoutRequests[request.address] = undefined;
-            return this.createNewValidMempool(request.address, request.signature, this.mempool[request.address].message, "validation window", true);
+            this.timeoutRequests[request.address] = setTimeout(function() {
+                this.removeValidationRequest(request.address)
+            }, TimeoutMempoolValidWindowTime);
+            return this.createNewValidMempool(request.address, request.signature, this.mempool[request.address].message, TimeoutMempoolValidWindowTime/1000, true);
         }
         var errObj = {
-            error: "Unable to verify message"
+            Error: "Unable to verify message"
         };
         return errObj;
     }
 
-    createNewValidMempool(iwalletAddress,irequestTimeStamp,imessage,ivalidationWindow,ivalid) {
+    createNewValidMempool(iwalletAddress, irequestTimeStamp, imessage, ivalidationWindow, ivalid) {
         this.registerStar = true;
         this.status = {
             address: iwalletAddress,
@@ -89,14 +98,22 @@ class Mempool {
             messageSignature: ivalid
         }
         var newValidMempool = {
-            registerStar: this.registerStar, 
-            status: this.status           
+            registerStar: this.registerStar,
+            status: this.status
         }
         this.mempoolValid[iwalletAddress] = newValidMempool;
         return newValidMempool;
     }
 
     verifyAddressRequest(request) {
+        //check for story <= 250 words
+        if (request.star.story.split(' ').length > 250) {
+            var errObj = {
+                Error: "Star story cannot have more than 250 words"
+            };
+            return errObj;
+        }
+        //if messagae signature is valid, return object with encoded star story 
         if (this.mempoolValid[request.address] !== undefined && this.mempoolValid[request.address].status.messageSignature === true) {
             return this.encodeStarStoryData(request);
         }
@@ -106,33 +123,18 @@ class Mempool {
         return errObj;
     }
 
-    encodeStarStoryData(request) {
+    encodeStarStoryData(request) {        
         let body = {
             address: request.address,
             star: {
-                  ra: request.star.ra,
-                  dec: request.star.dec,
-                  mag: request.star.mag,
-                  cen: request.star.cen,
-                  story: Buffer(request.star.story).toString('hex')                  
-                  }
+                ra: request.star.ra,
+                dec: request.star.dec,
+                mag: request.star.mag,
+                cen: request.star.cen,
+                story: Buffer(request.star.story).toString('hex')
+            }
         };
         return body;
-    }
-
-
-
-    testDelay() {
-        let self = this;
-        return new Promise(function(resolve, reject) {
-        let somtething = setTimeout(function(){ resolve(self.secondDelayFunc()) }, TimeoutRequestsWindowTime );
-        })
-    }
-
-    secondDelayFunc() {
-        console.log("secondDelayFunc");
-        let obj = {address: "asdasfadsfadsf"}
-        return (obj)
     }
 }
 

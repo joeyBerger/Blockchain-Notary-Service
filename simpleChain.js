@@ -1,8 +1,4 @@
-/* ===== SHA256 with Crypto-js ===============================
-|  Learn more: Crypto-js: https://github.com/brix/crypto-js  |
-|  =========================================================*/
 const SHA256 = require('crypto-js/sha256');
-
 const hex2ascii = require('hex2ascii')
 
 // Importing the module 'level'
@@ -12,8 +8,13 @@ const level = require('level');
 const chainDB = './chaindata';
 const db = level(chainDB);
 
-// Delcraing folder path that contains the Block class
+// Declaring folder path that contains the Block class
 const Block = require('./Block.js');
+
+// General error message
+const missingBlockErrorObj = {
+    Error: "Error: Requested Block Does Not Exist"
+};
 
 /* ===== Blockchain Class ==========================
 |  Class with a constructor for new blockchain 		|
@@ -30,7 +31,7 @@ class Blockchain {
         })
     }
 
-    // Add new block
+    //add new block
     addBlock(newBlock) {
         let self = this;
         return new Promise(function(resolve, reject) {
@@ -62,7 +63,7 @@ class Blockchain {
         })
     }
 
-    // Get block height
+    //get block height
     getBlockHeight() {
         let self = this;
         return new Promise(function(resolve, reject) {
@@ -84,17 +85,15 @@ class Blockchain {
         });
     }
 
-    // get block
+    //get block
     getBlock(blockHeight) {
         return new Promise(function(resolve, reject) {
             //only search db if not genesis block
             if (blockHeight > -1) {
                 db.get(blockHeight, function(err, value) {
                     if (err) {
-                        resolve("Requested Block Does Not Exist");
-                        //reject(err);
+                        resolve(missingBlockErrorObj);
                     } else {
-                        //resolve(JSON.parse((value)));
                         resolve(value);
                     }
                 })
@@ -104,7 +103,7 @@ class Blockchain {
         });
     };
 
-    // validate block
+    //validate block
     validateBlock(blockHeight) {
         let self = this;
         return new Promise(function(resolve) {
@@ -123,7 +122,7 @@ class Blockchain {
         })
     }
 
-    // Validate blockchain
+    //validate blockchain
     validateChain() {
         let self = this;
         let validateBlockErrorLog = [];
@@ -151,7 +150,6 @@ class Blockchain {
                             console.log(validateBlockErrorLog[i]);
                         }
                     }
-
                     Promise.all(blockObj).then(function(results) {
                         for (var i = 0; i < results.length - 1; i++) {
                             let blockHash = results[i].hash;
@@ -174,64 +172,61 @@ class Blockchain {
         })
     }
 
-    addDecodedStoryToReturnObj(obj) {
-        return new Promise(function(resolve) {
-            let jsonResult = JSON.parse((obj))
-            jsonResult.body.star.storyDecoded = hex2ascii(jsonResult.body.star.story)
-            resolve (jsonResult);
-        })
-
-    }
-
-    // Get block by hash
-   getBlockByHash(hash) {
-        let self = this;
+    //get block by hash
+    getBlockByHash(hash) {
         let block = null;
-        return new Promise(function(resolve, reject){
+        return new Promise(function(resolve, reject) {
             db.createReadStream()
-            .on('data', function (data) {
-                // let jsonResult = JSON.parse((data.value))
-                // console.log(jsonResult.hash);
-                //console.log(JSON.parse((data.value)).hash);
-                if(JSON.parse((data.value)).hash === hash){
-                    block = data.value;
-                    console.log("found block");
+                .on('data', function(data) {
+                    if (JSON.parse((data.value)).hash === hash) {
+                        block = data.value;
+                        resolve(block);
+                    }
+                })
+                .on('error', function(err) {
+                    reject(err)
+                })
+                .on('close', function() {
+                    if (block === null) {
+                        resolve(missingBlockErrorObj);
+                    }
                     resolve(block);
-                }
-            })
-            .on('error', function (err) {
-                reject(err)
-            })
-            .on('close', function () {
-                resolve(block);
-            });
+                });
         });
     }
 
+    //decode story from hexadecimal and add to requested return object
+    addDecodedStoryToReturnObj(obj) {
+        return new Promise(function(resolve) {
+            let jsonResult = JSON.parse((obj))
+            if (jsonResult.body.star !== undefined) {
+                jsonResult.body.star.storyDecoded = hex2ascii(jsonResult.body.star.story)
+            }
+            resolve(jsonResult);
+        })
+    }
+
+    //get all relevent blocks based on submited wallet address, will return an arrow of objects
     getBlockByWalletAddress(address) {
-        let self = this;
         let block = [];
-        return new Promise(function(resolve, reject){
+        return new Promise(function(resolve, reject) {
             db.createReadStream()
-            .on('data', function (data) {
-                //console.log(JSON.parse((data.value)).body);
-                if (JSON.parse((data.value)).body.address !== undefined && JSON.parse((data.value)).body.address === address)
-                {
-                    //block.push(JSON.parse((data.value)));
-                    block.push(((data.value)));
-                }
-                // if(JSON.parse((data.value)).hash === hash){
-                //     block = data.value;
-                //     resolve(block);
-                // }
-            })
-            .on('error', function (err) {
-                reject(err)
-            })
-            .on('close', function () {
-                resolve(block);
-            });
+                .on('data', function(data) {
+                    if (JSON.parse(data.value).body.address !== undefined && JSON.parse(data.value).body.address === address) {
+                        block.push(data.value);
+                    }
+                })
+                .on('error', function(err) {
+                    reject(err)
+                })
+                .on('close', function() {
+                    if (block.length === 0) {
+                        resolve(missingBlockErrorObj);
+                    }
+                    resolve(block);
+                });
         })
     }
 }
+
 module.exports.Blockchain = Blockchain;
