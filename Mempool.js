@@ -70,7 +70,9 @@ class Mempool {
         //if timeoutRequests' set timeout function is undefined, then validation must have timed out and return error object
         if (this.timeoutRequests[request.address] === undefined) {
             var errObj = {
-                Error: "Validation Request Has Timed Out"
+                statusCode: "408",
+                referenceId: "0002",
+                message: "Validation Request Has Timed Out"
             };
             return errObj;
         }
@@ -85,7 +87,9 @@ class Mempool {
             return this.createNewValidMempool(request.address, request.signature, this.mempool[request.address].message, TimeoutMempoolValidWindowTime/1000, true);
         }
         var errObj = {
-            Error: "Unable to verify message"
+            statusCode: "403",
+            referenceId: "0003",
+            message: "Unable To Verify Message"
         };
         return errObj;
     }
@@ -111,7 +115,9 @@ class Mempool {
         //check for story > 250 words
         if (request.star.story.split(' ').length > 250) {
             var errObj = {
-                Error: "Star story cannot have more than 250 words"
+                statusCode: "413",
+                referenceId: "0004",
+                message: "Star Story Cannot Have More Than 250 Words"
             };
             return errObj;
         }
@@ -120,7 +126,9 @@ class Mempool {
             return this.encodeStarStoryData(request);
         }
         var errObj = {
-            error: "Unable to verify address"
+            statusCode: "403",
+            referenceId: "0005",
+            message: "Unable To Verify Address"
         };
         return errObj;
     }

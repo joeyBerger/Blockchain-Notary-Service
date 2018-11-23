@@ -13,7 +13,9 @@ const Block = require('./Block.js');
 
 // General error message
 const missingBlockErrorObj = {
-    Error: "Error: Requested Block Does Not Exist"
+    statusCode: "404",
+    referenceId: "0001",
+    mesage: "Requested Block Does Not Exist"
 };
 
 /* ===== Blockchain Class ==========================

@@ -70,7 +70,7 @@ class BlockController {
             handler: async (request, h) => {
                 let blockIndex = parseInt(request.params.index);
                 const result = await this.blockchain.getBlock(blockIndex);
-                return result.Error !== undefined ? result : await this.blockchain.addDecodedStoryToReturnObj(JSON.stringify(result).toString());
+                return result.statusCode !== undefined ? result : await this.blockchain.addDecodedStoryToReturnObj(JSON.stringify(result).toString());
             }
         });
     }
@@ -83,7 +83,7 @@ class BlockController {
             handler: async (request, h) => {                
                 let hashIndex = request.params.hashIndex;
                 const result = await this.blockchain.getBlockByHash(hashIndex);         
-                return result.Error !== undefined ? result : await this.blockchain.addDecodedStoryToReturnObj(result);
+                return result.statusCode !== undefined ? result : await this.blockchain.addDecodedStoryToReturnObj(result);
             }
         });
     }
