@@ -9,20 +9,23 @@ class BlockController {
 
     constructor(server) {
         this.server = server;
-        this.blocks = [];
-        this.getBlockByIndex();
         this.requestValidation();
         this.validateMessageSignature();
         this.submitStarData();
+        this.getBlockByIndex();
         this.getBlockByHash();
         this.getBlockByWalletAddress();
-        this.myBlockChain = new Blockchain.Blockchain();
+        //create blockchain instance
+        this.blockchain = new Blockchain.Blockchain();
+        //create mempool instance
         this.mempool = new Mempool.Mempool();
     }
+
+    //initial request for validation
     requestValidation() {
         this.server.route({
             method: 'POST',
-            path: '/api/requestValidation',
+            path: '/requestValidation',
             handler: async (request, h) => {
                 const result = await this.mempool.makeInitialValidation(request.payload);
                 return result;  
@@ -30,10 +33,11 @@ class BlockController {
         });
     }
 
+    //post with signature 
     validateMessageSignature() {
         this.server.route({
             method: 'POST',
-            path: '/api/message-signature/validate',
+            path: '/message-signature/validate',
             handler: async (request, h) => {
                 const result = await this.mempool.validateRequestByWallet(request.payload);
                 return result;  
@@ -41,61 +45,62 @@ class BlockController {
         });
     }
 
-    submitStarData() {  //change name
+    //post star data and store results to blockchain, return new block object
+    submitStarData() {
         this.server.route({
             method: 'POST',
-            path: '/api/submitStarData',
+            path: '/block',
             handler: async (request, h) => {
                 const result = await this.mempool.verifyAddressRequest(request.payload);
                 if (result.address !== undefined) {
                     //add block to blockchain
-                    let blockResult = await this.myBlockChain.addBlock(new BlockClass.Block(result));
-                    return await this.myBlockChain.addDecodedStoryToReturnObj(blockResult);                    
+                    let blockResult = await this.blockchain.addBlock(new BlockClass.Block(result));
+                    return await this.blockchain.addDecodedStoryToReturnObj(blockResult);                    
                 }
                 return result;  
             }
         });
     }
 
-    //Retrieve stored block by user defined block height
+    //retrieve stored block by user defined block height
     getBlockByIndex() {
         this.server.route({
             method: 'GET',
             path: '/block/{index}',
             handler: async (request, h) => {
                 let blockIndex = parseInt(request.params.index);
-                const result = await this.myBlockChain.getBlock(blockIndex);
-                return result.Error !== undefined ? result : await this.myBlockChain.addDecodedStoryToReturnObj(result);
+                const result = await this.blockchain.getBlock(blockIndex);
+                return result.Error !== undefined ? result : await this.blockchain.addDecodedStoryToReturnObj(JSON.stringify(result).toString());
             }
         });
     }
 
-    //Retrieve stored block by user defined block hash
+    //retrieve stored block by user defined block hash
     getBlockByHash() {
         this.server.route({
             method: 'GET',
             path: '/stars/hash:{hashIndex}',
             handler: async (request, h) => {                
                 let hashIndex = request.params.hashIndex;
-                const result = await this.myBlockChain.getBlockByHash(hashIndex);         
-                return result.Error !== undefined ? result : await this.myBlockChain.addDecodedStoryToReturnObj(result);
+                const result = await this.blockchain.getBlockByHash(hashIndex);         
+                return result.Error !== undefined ? result : await this.blockchain.addDecodedStoryToReturnObj(result);
             }
         });
     }
 
-    //Retrieve stored block by user defined wallet address 
+    //retrieve stored block by user defined wallet address 
     getBlockByWalletAddress() {
         this.server.route({
             method: 'GET',
             path: '/stars/address:{addressIndex}',
             handler: async (request, h) => {                
                 let addressIndex = request.params.addressIndex;
-                const result = await this.myBlockChain.getBlockByWalletAddress(addressIndex);
+                const result = await this.blockchain.getBlockByWalletAddress(addressIndex);
                 if (result.length > 0) {
                     let finalBlocks = [];
                     for (var i = 0; i < result.length; i++)
                     {
-                        finalBlocks.push(await this.myBlockChain.addDecodedStoryToReturnObj(result[i]));
+                        finalBlocks.push(await this.blockchain.addDecodedStoryToReturnObj(result[i]));
                     }    
                     return finalBlocks;
                 } 

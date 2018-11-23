@@ -1,12 +1,14 @@
-const TimeoutRequestsWindowTime = 5 * 60 * 1000; // 5*60*1000;  //1000
+const TimeoutRequestsWindowTime = 5 * 60 * 1000;
 const TimeoutMempoolValidWindowTime = 30 * 60 * 1000;
 
+/* ===== Mempool Class =============================
+|  Class with a constructor for the mempool		|
+|  ================================================*/
 class Mempool {
     constructor() {
         this.mempool = [];
         this.timeoutRequests = [];
         this.mempoolValid = [];
-        this.timeoutMempoolValid = []; //implement this      
     }
 
     makeInitialValidation(request) {
@@ -43,7 +45,7 @@ class Mempool {
     returnValidationObjOnInitialRequest(iwalletAddress) {
         //get current time
         let requestTimeStamp = new Date().getTime().toString().slice(0, -3);
-        requestTimeStamp = "1542589853"; //temp!!!
+        // requestTimeStamp = "1542589853"; //temp!!!
         //generate message string
         let message = iwalletAddress.toString() + ":" + requestTimeStamp + ":" + "starRegistry";
         //generate validation window to display in seconds
@@ -106,7 +108,7 @@ class Mempool {
     }
 
     verifyAddressRequest(request) {
-        //check for story <= 250 words
+        //check for story > 250 words
         if (request.star.story.split(' ').length > 250) {
             var errObj = {
                 Error: "Star story cannot have more than 250 words"

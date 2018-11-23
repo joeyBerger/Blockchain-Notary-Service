@@ -19,7 +19,6 @@ const missingBlockErrorObj = {
 /* ===== Blockchain Class ==========================
 |  Class with a constructor for new blockchain 		|
 |  ================================================*/
-
 class Blockchain {
     constructor() {
         let self = this;
@@ -94,7 +93,7 @@ class Blockchain {
                     if (err) {
                         resolve(missingBlockErrorObj);
                     } else {
-                        resolve(value);
+                        resolve(JSON.parse(value));
                     }
                 })
             } else {
