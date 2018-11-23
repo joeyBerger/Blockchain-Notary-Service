@@ -45,7 +45,6 @@ class Mempool {
     returnValidationObjOnInitialRequest(iwalletAddress) {
         //get current time
         let requestTimeStamp = new Date().getTime().toString().slice(0, -3);
-        // requestTimeStamp = "1542589853"; //temp!!!
         //generate message string
         let message = iwalletAddress.toString() + ":" + requestTimeStamp + ":" + "starRegistry";
         //generate validation window to display in seconds
@@ -84,7 +83,9 @@ class Mempool {
             this.timeoutRequests[request.address] = setTimeout(function() {
                 this.removeValidationRequest(request.address)
             }, TimeoutMempoolValidWindowTime);
-            return this.createNewValidMempool(request.address, request.signature, this.mempool[request.address].message, TimeoutMempoolValidWindowTime/1000, true);
+            //get current time
+            let requestTimeStamp = new Date().getTime().toString().slice(0, -3);
+            return this.createNewValidMempool(request.address, requestTimeStamp, this.mempool[request.address].message, TimeoutMempoolValidWindowTime/1000, true);
         }
         var errObj = {
             statusCode: "403",
