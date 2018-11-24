@@ -45,7 +45,6 @@ class Mempool {
     returnValidationObjOnInitialRequest(iwalletAddress) {
         //get current time
         let requestTimeStamp = new Date().getTime().toString().slice(0, -3);   
-        console.log("requestTimeStamp",requestTimeStamp);     
         //generate message string
         let message = iwalletAddress.toString() + ":" + requestTimeStamp + ":" + "starRegistry";
         //generate validation window to display in seconds
@@ -114,12 +113,31 @@ class Mempool {
     }
 
     verifyAddressRequest(request) {
+        //check for valid coordinates
+        if (request.star.dec === "" || request.star.ra === "") {
+            var errObj = {
+                statusCode: "400",
+                referenceId: "0004",
+                message: "Invalid Star Coordinates"
+            };
+            return errObj;
+        }        
         //check for story > 250 words
         if (request.star.story.split(' ').length > 250) {
             var errObj = {
                 statusCode: "413",
-                referenceId: "0004",
+                referenceId: "0005",
                 message: "Star Story Cannot Have More Than 250 Words"
+            };
+            return errObj;
+        }
+        //check for non ascii characters in story
+        let ascii = /^[ -~]+$/;
+        if (ascii.test(request.star.story) === false) {
+            var errObj = {
+                statusCode: "400",
+                referenceId: "0006",
+                message: "Start Story Must Contain Only ASCII Characters"
             };
             return errObj;
         }
@@ -131,7 +149,7 @@ class Mempool {
         }
         var errObj = {
             statusCode: "403",
-            referenceId: "0005",
+            referenceId: "0007",
             message: "Unable To Verify Address"
         };
         return errObj;
