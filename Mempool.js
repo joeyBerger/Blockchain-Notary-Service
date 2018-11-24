@@ -44,7 +44,8 @@ class Mempool {
 
     returnValidationObjOnInitialRequest(iwalletAddress) {
         //get current time
-        let requestTimeStamp = new Date().getTime().toString().slice(0, -3);
+        let requestTimeStamp = new Date().getTime().toString().slice(0, -3);   
+        console.log("requestTimeStamp",requestTimeStamp);     
         //generate message string
         let message = iwalletAddress.toString() + ":" + requestTimeStamp + ":" + "starRegistry";
         //generate validation window to display in seconds
@@ -123,7 +124,9 @@ class Mempool {
             return errObj;
         }
         //if messagae signature is valid, return object with encoded star story 
-        if (this.mempoolValid[request.address] !== undefined && this.mempoolValid[request.address].status.messageSignature === true) {
+        if (this.mempoolValid[request.address] !== undefined && this.mempoolValid[request.address].status.messageSignature === true) {            
+            this.mempoolValid[request.address] = undefined;
+            this.timeoutRequests[request.address] = undefined;
             return this.encodeStarStoryData(request);
         }
         var errObj = {
